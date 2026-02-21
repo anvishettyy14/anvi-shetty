@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dept Smart Portal | Unified</title>
+    <style>
+        :root { --primary: #2c3e50; --accent: #3498db; --success: #27ae60; --danger: #e74c3c; --bg: #f8f9fa; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; }
+        nav { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .container { max-width: 1100px; margin: 20px auto; padding: 0 20px; }
+        .box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; border-top: 4px solid var(--accent); }
+        input, select, button { padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 6px; width: 100%; box-sizing: border-box; font-size: 14px; }
+        button { background: var(--accent); color: white; border: none; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        button:hover { filter: brightness(1.1); transform: translateY(-1px); }
+        .btn-approve { background: var(--success); width: auto; padding: 8px 15px; }
+        .btn-reject { background: var(--danger); width: auto; padding: 8px 15px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; }
+        .card { border: 1px solid #eee; padding: 15px; border-radius: 10px; background: #fff; transition: 0.3s; position: relative; }
+        .tag { position: absolute; top: 10px; right: 10px; font-size: 10px; padding: 3px 8px; border-radius: 20px; color: white; text-transform: uppercase; font-weight: bold; }
+        .tag-faculty { background: #8e44ad; }
+        .tag-student { background: #f39c12; }
+        .new-badge { background: var(--danger); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; margin-left: 10px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .hidden { display: none !important; }
+        .logout-btn { background: transparent; border: 1px solid white; width: auto; padding: 5px 15px; }
+        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .stat-card { background: white; padding: 15px; border-radius: 10px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div style="font-size: 1.4rem; font-weight: bold;">🎓 Smart Dept Portal</div>
+    <div id="navInfo" style="display: flex; align-items: center; gap: 15px;">
+        <span id="userDisplay">Guest</span>
+        <button id="logoutBtn" class="logout-btn hidden" onclick="logout()">Logout</button>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="authBox" class="box">
+        <h3>🔐 Portal Access</h3>
+        <select id="regRole" onchange="toggleSemInput()">
+            <option value="Student">Student (Contributor)</option>
+            <option value="Faculty">Faculty (Creator/Approver)</option>
+            <option value="Admin">HOD (Super User)</option>
+        </select>
+        <input type="text" id="regName" placeholder="Full Name">
+        <input type="text" id="regUSN" placeholder="USN or Employee ID">
+        <div id="semContainer">
+            <select id="regSem">
+                <option value="1st Sem">1st Sem</option>
+                <option value="2nd Sem">2nd Sem</option>
+                <option value="3rd Sem">3rd Sem</option>
+                <option value="4th Sem">4th Sem</option>
+                <option value="5th Sem">5th Sem</option>
+                <option value="6th Sem">6th Sem</option>
+            </select>
+        </div>
+        <button onclick="handleAuth()">Sign In / Register</button>
+    </div>
+
+    <div id="mainPortal" class="hidden">
+        <div class="dashboard">
+            <div class="stat-card"> <h2 id="totalResources">0</h2> <p>Resources</p> </div>
+            <div class="stat-card"> <h2 id="pendingCount">0</h2> <p>Pending</p> </div>
+            <div class="stat-card"> <h2 id="totalNotices">0</h2> <p>Notices</p> </div>
+            <div class="stat-card"> <h2 id="totalSubjects">0</h2> <p>Subjects</p> </div>
+        </div>
+
+        <div class="box">
+            <h3>📢 Notices</h3>
+            <div id="adminNoticeControls" class="hidden">
+                <input type="text" id="noticeText" placeholder="Post a new notice...">
+                <button onclick="addNotice()">Post Notice</button>
+            </div>
+            <ul id="noticeList" style="list-style:none; padding:0;"></ul>
+        </div>
+
+        <div class="box">
+            <h3>Upload Material</h3>
+            <input type="text" id="fileSub" placeholder="Subject Code (e.g. CS301)">
+            <select id="fileSem">
+                <option value="1st Sem">1st Sem</option>
+                <option value="2nd Sem">2nd Sem</option>
+                <option value="3rd Sem">3rd Sem</option>
+                <option value="4th Sem">4th Sem</option>
+                <option value="5th Sem">5th Sem</option>
+                <option value="6th Sem">6th Sem</option>
+            </select>
+            <select id="fileUnit">
+                <option value="Unit 1">Unit 1</option>
+                <option value="Unit 2">Unit 2</option>
+                <option value="Unit 3">Unit 3</option>
+                <option value="Unit 4">Unit 4</option>
+                <option value="Unit 5">Unit 5</option>
+            </select>
+            <input type="file" id="fileInput">
+            <button onclick="handleUpload()">Submit for Review</button>
+        </div>
+
+        <div class="box hidden" id="approvalSection">
+            <h3>⏳ Pending Approvals</h3>
+            <div id="pendingList" class="grid"></div>
+        </div>
+
+        <div class="box">
+            <h3>📚 Repository</h3>
+            <div class="grid" style="grid-template-columns: 1fr 1fr 1fr; margin-bottom: 15px;">
+                <select id="filterSub" onchange="renderFiles()"><option value="">All Subjects</option></select>
+                <select id="filterSem" onchange="renderFiles()">
+                    <option value="">All Semesters</option>
+                    <option value="1st Sem">1st Sem</option><option value="2nd Sem">2nd Sem</option>
+                    <option value="3rd Sem">3rd Sem</option><option value="4th Sem">4th Sem</option>
+                    <option value="5th Sem">5th Sem</option><option value="6th Sem">6th Sem</option>
+                </select>
+                <select id="filterUnit" onchange="renderFiles()">
+                    <option value="">All Units</option>
+                    <option value="Unit 1">Unit 1</option><option value="Unit 2">Unit 2</option>
+                    <option value="Unit 3">Unit 3</option><option value="Unit 4">Unit 4</option>
+                    <option value="Unit 5">Unit 5</option>
+                </select>
+            </div>
+            <div id="fileLibrary" class="grid"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+let resources = JSON.parse(localStorage.getItem('resources')) || [];
+let notices = JSON.parse(localStorage.getItem('notices')) || [];
+
+window.onload = () => { if(currentUser) showDashboard(); };
+
+function handleAuth(){
+    const role = document.getElementById("regRole").value;
+    const name = document.getElementById("regName").value.trim();
+    const usn = document.getElementById("regUSN").value.trim().toUpperCase();
+    const sem = document.getElementById("regSem").value;
+
+    if(!name || !usn) return alert("Please fill in all fields.");
+
+    currentUser = {role, name, usn, sem};
+    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+    showDashboard();
+}
+
+function showDashboard(){
+    document.getElementById("authBox").classList.add('hidden');
+    document.getElementById("mainPortal").classList.remove('hidden');
+    document.getElementById("logoutBtn").classList.remove('hidden');
+    document.getElementById("userDisplay").innerText = `${currentUser.name} (${currentUser.role})`;
+
+    if(currentUser.role !== "Student") {
+        document.getElementById("adminNoticeControls").classList.remove('hidden');
+    }
+    
+    updateDashboardStats();
+    updateSubjects();
+    renderFiles();
+    renderNotices();
+    renderPending();
+}
+
+function handleUpload(){
+    const fileInput = document.getElementById("fileInput");
+    const file = fileInput.files[0];
+    const sub = document.getElementById("fileSub").value.trim().toUpperCase();
+    const sem = document.getElementById("fileSem").value;
+    const unit = document.getElementById("fileUnit").value;
+
+    if(!file || !sub) return alert("Please select a file and enter subject code.");
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const newFile = {
+            id: Date.now(),
+            fileName: file.name,
+            fileData: e.target.result, // BASE64 content
+            subject: sub,
+            semester: sem,
+            unit: unit,
+            author: currentUser.name,
+            role: currentUser.role,
+            status: (currentUser.role === "Student") ? "Pending" : "Approved"
+        };
+
+        resources.push(newFile);
+        try {
+            localStorage.setItem('resources', JSON.stringify(resources));
+            alert("Upload successful!");
+            location.reload(); // Refresh to update everything
+        } catch(e) {
+            alert("File too large for browser storage. Please try a smaller file.");
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
+function renderFiles(){
+    const lib = document.getElementById("fileLibrary");
+    lib.innerHTML = "";
+    const fSub = document.getElementById("filterSub").value;
+    const fSem = document.getElementById("filterSem").value;
+    const fUnit = document.getElementById("filterUnit").value;
+
+    resources.forEach(file => {
+        if(file.status === "Approved" && (!fSub || file.subject === fSub) && (!fSem || file.semester === fSem) && (!fUnit || file.unit === fUnit)) {
+            lib.innerHTML += `
+            <div class="card">
+                <span class="tag ${file.role === 'Faculty' ? 'tag-faculty' : 'tag-student'}">${file.role}</span>
+                <strong>${file.fileName}</strong>
+                <div style="font-size:12px; color:#666; margin: 5px 0;">${file.subject} • ${file.unit}</div>
+                <button onclick="viewFile(${file.id})">Open File</button>
+            </div>`;
+        }
+    });
+}
+
+function viewFile(id) {
+    const file = resources.find(r => r.id === id);
+    if (!file || !file.fileData) return alert("File content missing.");
+
+    // Convert Base64 back to a format the browser can read as a "real" file
+    const base64Parts = file.fileData.split(',');
+    const contentType = base64Parts[0].split(':')[1].split(';')[0];
+    const byteCharacters = atob(base64Parts[1]);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: contentType });
+    
+    // Create a temporary URL for the file
+    const fileURL = URL.createObjectURL(blob);
+    
+    // Open the file in a new tab
+    const win = window.open(fileURL, '_blank');
+    
+    // Fallback: If the window didn't open or is blank, trigger a download
+    if (!win || win.closed || typeof win.closed == 'undefined') {
+        const link = document.createElement('a');
+        link.href = fileURL;
+        link.download = file.fileName;
+        link.click();
+    }
+}
+
+function renderPending(){
+    const pList = document.getElementById("pendingList");
+    pList.innerHTML = "";
+    if(currentUser.role !== "Student") {
+        const pending = resources.filter(r => r.status === "Pending");
+        if(pending.length > 0) {
+            document.getElementById("approvalSection").classList.remove("hidden");
+            pending.forEach(file => {
+                pList.innerHTML += `
+                <div class="card">
+                    <strong>${file.fileName}</strong>
+                    <div style="font-size:12px; margin-bottom:10px;">By: ${file.author}</div>
+                    <button class="btn-approve" onclick="approve(${file.id})">✔</button>
+                    <button class="btn-reject" onclick="reject(${file.id})">✖</button>
+                    <button style="width:auto; padding:8px 15px;" onclick="viewFile(${file.id})">View</button>
+                </div>`;
+            });
+        }
+    }
+}
+
+function approve(id) {
+    resources = resources.map(r => r.id === id ? {...r, status: "Approved"} : r);
+    localStorage.setItem('resources', JSON.stringify(resources));
+    location.reload();
+}
+
+function reject(id) {
+    resources = resources.filter(r => r.id !== id);
+    localStorage.setItem('resources', JSON.stringify(resources));
+    location.reload();
+}
+
+function updateDashboardStats(){
+    document.getElementById("totalResources").innerText = resources.filter(r => r.status === "Approved").length;
+    document.getElementById("pendingCount").innerText = resources.filter(r => r.status === "Pending").length;
+    document.getElementById("totalNotices").innerText = notices.length;
+    document.getElementById("totalSubjects").innerText = [...new Set(resources.map(r => r.subject))].length;
+}
+
+function updateSubjects(){
+    const subjects = [...new Set(resources.map(r => r.subject))];
+    const select = document.getElementById("filterSub");
+    select.innerHTML = '<option value="">All Subjects</option>';
+    subjects.forEach(s => select.innerHTML += `<option value="${s}">${s}</option>`);
+}
+
+function addNotice(){
+    const text = document.getElementById("noticeText").value;
+    if(!text) return;
+    notices.push({text, author: currentUser.name, time: Date.now()});
+    localStorage.setItem('notices', JSON.stringify(notices));
+    location.reload();
+}
+
+function renderNotices(){
+    const list = document.getElementById("noticeList");
+    notices.slice().reverse().forEach(n => {
+        list.innerHTML += `<li style="padding:10px; border-bottom:1px solid #eee;">
+            <b>${n.author}:</b> ${n.text} <br>
+            <small style="color:#888;">${new Date(n.time).toLocaleString()}</small>
+        </li>`;
+    });
+}
+
+function toggleSemInput(){
+    document.getElementById("semContainer").style.display = (document.getElementById("regRole").value === "Student") ? "block" : "none";
+}
+
+
+function logout(){
+    localStorage.removeItem('currentUser');
+    location.reload();
+}
+</script>
+</body>
+</html>
